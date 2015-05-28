@@ -46,7 +46,7 @@ func (t *Tx) Abort(receipt bool) error {
 	return t.transport.TxAbort(t.tid, nil)
 }
 
-func (t *Tx) TxSend(dest string, hdrs *map[string]string, bodyType string, body io.Reader) error {
+func (t *Tx) Send(dest string, hdrs *map[string]string, bodyType string, body io.Reader) error {
 	if t.done {
 		return ErrTxDone
 	}
