@@ -70,13 +70,25 @@ func doWithReceipt(r *receipts, f receiptFunc) (err error) {
 	return nil
 }
 
+// Client is a STOMP 1.2 client.
+// The client provides channels for reading frames.
+// The client object will autmatically manage RECEIPT frames.
 type Client struct {
 	transport *Transport
 	receipts  *receipts
-	MsgCh     chan *Frame
-	ErrCh     chan *Frame
+
+	// MsgCh provides a channel from which STOMP MESSAGE frames
+	// may be read.
+	MsgCh chan *Frame
+
+	// ErrCh provides a channel from which STOMP ERROR frames
+	// may be read.
+	ErrCh chan *Frame
 }
 
+// Connect creates a new client object and completes a STOMP handshake.
+// A nil conf value will use a default configuration.
+// A nil tr value indicates no TLS and will default to net.Dial.
 func Connect(addr string, conf *Config, tr *TransportConfig) (*Client, error) {
 	if conf == nil {
 		conf = DefaultConfig
@@ -233,6 +245,8 @@ loop:
 	close(c.MsgCh)
 }
 
+// Disconnect disconnect from the server and gracefully
+// shuts down the client and the underlying transport.
 func (c *Client) Disconnect() (err error) {
 	defer c.transport.Close()
 
@@ -261,6 +275,11 @@ func (c *Client) Disconnect() (err error) {
 	return nil
 }
 
+// Send sends a message to requested destination dest.
+// The parameters hdrs and body may be nil, indicating that they
+// will not be used for the sent message.
+// A true receipt value will use a receipt for the message.
+// Send automatically generates a content-length for the provided body.
 func (c *Client) Send(dest string, hdrs *map[string]string, bodyType string, body io.Reader, receipt bool) error {
 	if receipt {
 		return doWithReceipt(c.receipts, func(rid string) error {
@@ -270,6 +289,8 @@ func (c *Client) Send(dest string, hdrs *map[string]string, bodyType string, bod
 	return c.transport.Send(dest, hdrs, bodyType, body, nil)
 }
 
+// Ack sends an ACK frame.
+// A true receipt value will use a receipt for the frame.
 func (c *Client) Ack(id string, receipt bool) error {
 	if receipt {
 		return doWithReceipt(c.receipts, func(rid string) error {
@@ -279,6 +300,8 @@ func (c *Client) Ack(id string, receipt bool) error {
 	return c.transport.Ack(id, nil)
 }
 
+// Nack sends an NACK frame.
+// A true receipt value will use a receipt for the frame.
 func (c *Client) Nack(id string, receipt bool) error {
 	if receipt {
 		return doWithReceipt(c.receipts, func(rid string) error {
@@ -302,6 +325,9 @@ const (
 	ClientIndividualMode = "client-individual"
 )
 
+// Subscribe initiates a subscription to the requested destination dest.
+// Subscribe returns the subscription ID.
+// A true receipt value will use a receipt for the frame.
 func (c *Client) Subscribe(dest string, mode AckMode, receipt bool) (id string, err error) {
 	id, err = newUUID()
 	if err != nil {
@@ -319,6 +345,8 @@ func (c *Client) Subscribe(dest string, mode AckMode, receipt bool) (id string, 
 	return id, err
 }
 
+// Unsubscribe unsubscribes from the subscription with id.
+// A true receipt value will use a receipt for the frame.
 func (c *Client) Unsubscribe(id string, receipt bool) (err error) {
 	if receipt {
 		return doWithReceipt(c.receipts, func(rid string) error {
@@ -328,6 +356,9 @@ func (c *Client) Unsubscribe(id string, receipt bool) (err error) {
 	return c.transport.Unsubscribe(id, nil)
 }
 
+// Begin creates a new transaction an retusn a Tx object
+// to manage the transaction.
+// A true receipt value will use a receipt for the frame.
 func (c *Client) Begin(receipt bool) (tx *Tx, err error) {
 	tid, err := newUUID()
 	if err != nil {

@@ -10,12 +10,14 @@ import (
 	"strings"
 )
 
+// Frame is a STOMP frame.
 type Frame struct {
 	Command string
 	Headers map[string]string
 	Body    io.ReadCloser
 }
 
+// NewFrame creates a frame with the provided command and body.
 func NewFrame(cmd string, body io.Reader) *Frame {
 	if body == nil {
 		body = &bytes.Buffer{}
@@ -31,14 +33,17 @@ func NewFrame(cmd string, body io.Reader) *Frame {
 	}
 }
 
+// Encoder write Frames to an ouptput stream.
 type Encoder struct {
 	w io.Writer
 }
 
+// NewEncoder returns an encoder that writes to w.
 func NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{w: w}
 }
 
+// Encode writes an encoded frame to the stream.
 func (e *Encoder) Encode(f *Frame) error {
 	if f.Command == "HEARTBEAT" {
 		_, err := fmt.Fprintf(e.w, "%c", '\n')
@@ -83,14 +88,17 @@ func (e *Encoder) Encode(f *Frame) error {
 	return nil
 }
 
+// Decoder reads frames from an input stream.
 type Decoder struct {
 	r *bufio.Reader
 }
 
+// NewDecoder creates a new decoder with input stream r.
 func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{r: bufio.NewReader(r)}
 }
 
+// Decode decodes a frame from the input stream.
 func (d *Decoder) Decode(f *Frame) error {
 	c, err := d.r.ReadString('\n')
 	if err != nil {
