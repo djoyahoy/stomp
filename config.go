@@ -45,9 +45,7 @@ type Config struct {
 }
 
 // DefaultConfig is a default client configuration.
-//
-// Users are encouraged to implement their own error handler
-// as the default provides an empty error handler.
+// It only defines a Host parameter.
 var DefaultConfig = &Config{
 	Host: "/",
 }
